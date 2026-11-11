@@ -19,7 +19,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Extract and Build
+    - name: Extract, Bump Version, and Build
       run: |
         if [ -f "source.zip" ]; then
           unzip source.zip -d build_temp
@@ -36,6 +36,39 @@ jobs:
         cd "$PROJECT_DIR"
         echo "Project found in: $PROJECT_DIR"
         
+        # --- بخش جادویی: پیدا کردن و افزایش versionCode و versionName ---
+        # ۱. پیدا کردن فایل build.gradle یا build.gradle.kts در پوشه app
+        BUILD_FILE=""
+        if [ -f "app/build.gradle.kts" ]; then BUILD_FILE="app/build.gradle.kts"; 
+        elif [ -f "app/build.gradle" ]; then BUILD_FILE="app/build.gradle"; 
+        fi
+
+        if [ -n "$BUILD_FILE" ]; then
+          echo "Found build file: $BUILD_FILE"
+          # استخراج عدد فعلی ورژن کد
+          CURRENT_CODE=$(grep -oP 'versionCode\s*[=\s]\s*\K\d+' "$BUILD_FILE" | head -n 1)
+          if [ -n "$CURRENT_CODE" ]; then
+            NEW_CODE=$((CURRENT_CODE + 1))
+            echo "Bumping versionCode from $CURRENT_CODE to $NEW_CODE"
+            # جایگزینی عدد جدید در فایل
+            sed -i "s/versionCode\s*[=\s]\s*$CURRENT_CODE/versionCode = $NEW_CODE/g" "$BUILD_FILE"
+            sed -i "s/versionCode\s*[=\s]\s*$CURRENT_CODE/versionCode $NEW_CODE/g" "$BUILD_FILE"
+          fi
+
+          # استخراج و افزایش نسخه نمایشی (مثلاً از 1.0 به 1.1)
+          CURRENT_NAME=$(grep -oP 'versionName\s*[=\s]\s*"\K[^"]+' "$BUILD_FILE" | head -n 1)
+          if [ -n "$CURRENT_NAME" ]; then
+             # این خط فقط یه عدد ۰.۱ به انتهای ورژن اضافه میکنه
+             NEW_NAME="${CURRENT_NAME}.1"
+             echo "Bumping versionName from $CURRENT_NAME to $NEW_NAME"
+             sed -i "s/versionName\s*[=\s]\s*\"$CURRENT_NAME\"/versionName = \"$NEW_NAME\"/g" "$BUILD_FILE"
+             sed -i "s/versionName\s*[=\s]\s*\"$CURRENT_NAME\"/versionName \"$NEW_NAME\"/g" "$BUILD_FILE"
+          fi
+        else
+          echo "Warning: build.gradle file not found. Skipping version bump."
+        fi
+        # -------------------------------------------------------------
+
         if [ ! -f "gradlew" ]; then
           echo "gradlew not found. Installing gradle..."
           gradle wrapper
@@ -43,7 +76,6 @@ jobs:
         
         chmod +x gradlew
         
-        # این خط جادوییه: بهش میگیم بیخیال کلید گوگل بشه و بدون امضا بیلد کنه
         sed -i 's/signingConfig signingConfigs.release//g' app/build.gradle || true
         sed -i 's/signingConfig = signingConfigs.getByName("release")//g' app/build.gradle.kts || true
         

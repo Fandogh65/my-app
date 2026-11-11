@@ -17,11 +17,13 @@ jobs:
       run: |
         unzip source.zip -d extracted_code
         cd extracted_code
-        if [ $(ls -d */ 2>/dev/null | wc -l) -eq 1 ]; then
-          mv */ ../actual_code
-          cd ..
-          rm -rf extracted_code
-          mv actual_code extracted_code
+        # این بخش هوشمنده: میگرده ببینه فایل gradlew کجاست
+        if [ -f "gradlew" ]; then
+          echo "Found gradlew in root"
+        elif [ -f "*/gradlew" ]; then
+          echo "Found gradlew in a subfolder. Moving files up..."
+          shopt -s dotglob
+          mv */* .
         fi
 
     - name: Set up JDK 17

@@ -21,27 +21,29 @@ jobs:
 
     - name: Extract and Build
       run: |
-        # باز کردن زیپ
         if [ -f "source.zip" ]; then
           unzip source.zip -d build_temp
           cd build_temp
-        else
-          echo "source.zip not found, checking root..."
         fi
-
-        # پیدا کردن فایل gradlew
-        GRADLEW_FILE=$(find . -name "gradlew" -type f | head -n 1)
         
-        if [ -z "$GRADLEW_FILE" ]; then
-          echo "Error: Could not find gradlew anywhere!"
+        # پیدا کردن پوشه اصلی پروژه (جایی که فایل settings.gradle.kts هست)
+        PROJECT_DIR=$(find . -name "settings.gradle*" -type f | head -n 1 | xargs dirname)
+        
+        if [ -z "$PROJECT_DIR" ]; then
+          echo "Error: Could not find project root!"
           exit 1
         fi
         
-        PROJECT_DIR=$(dirname "$GRADLEW_FILE")
-        echo "Found project in: $PROJECT_DIR"
         cd "$PROJECT_DIR"
+        echo "Project found in: $PROJECT_DIR"
         
-        # دادن دسترسی و بیلد
+        # اگر فایل gradlew نبود، خودش با gradle نصبش میکنه
+        if [ ! -f "gradlew" ]; then
+          echo "gradlew not found. Installing gradle..."
+          gradle wrapper
+        fi
+        
+        # اجرای بیلد
         chmod +x gradlew
         ./gradlew assembleRelease
 
@@ -49,5 +51,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: app-release
-        # این خط میره کل پروژه رو میگرده، هر فایل APK پیدا کرد برمیداره!
         path: "**/*.apk"

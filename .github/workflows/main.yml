@@ -26,7 +26,6 @@ jobs:
           cd build_temp
         fi
         
-        # پیدا کردن پوشه اصلی پروژه (جایی که فایل settings.gradle.kts هست)
         PROJECT_DIR=$(find . -name "settings.gradle*" -type f | head -n 1 | xargs dirname)
         
         if [ -z "$PROJECT_DIR" ]; then
@@ -37,14 +36,17 @@ jobs:
         cd "$PROJECT_DIR"
         echo "Project found in: $PROJECT_DIR"
         
-        # اگر فایل gradlew نبود، خودش با gradle نصبش میکنه
         if [ ! -f "gradlew" ]; then
           echo "gradlew not found. Installing gradle..."
           gradle wrapper
         fi
         
-        # اجرای بیلد
         chmod +x gradlew
+        
+        # این خط جادوییه: بهش میگیم بیخیال کلید گوگل بشه و بدون امضا بیلد کنه
+        sed -i 's/signingConfig signingConfigs.release//g' app/build.gradle || true
+        sed -i 's/signingConfig = signingConfigs.getByName("release")//g' app/build.gradle.kts || true
+        
         ./gradlew assembleRelease
 
     - name: Find and Upload APK

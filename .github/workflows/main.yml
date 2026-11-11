@@ -1,0 +1,45 @@
+name: Build Release APK
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Extract Source Code
+      run: |
+        unzip source.zip -d extracted_code
+        cd extracted_code
+        if [ $(ls -d */ 2>/dev/null | wc -l) -eq 1 ]; then
+          mv */ ../actual_code
+          cd ..
+          rm -rf extracted_code
+          mv actual_code extracted_code
+        fi
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Grant execute permission for gradlew
+      working-directory: ./extracted_code
+      run: chmod +x gradlew
+
+    - name: Build Release APK
+      working-directory: ./extracted_code
+      run: ./gradlew assembleRelease
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release
+        path: extracted_code/app/build/outputs/apk/release/*.apk
